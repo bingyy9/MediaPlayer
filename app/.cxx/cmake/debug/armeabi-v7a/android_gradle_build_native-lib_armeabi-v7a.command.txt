@@ -1,0 +1,7 @@
+Executable : /Users/bingy/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja
+arguments : 
+-C
+/Users/bingy/Material/My_Documents/011_FFMPEG-master/app/.cxx/cmake/debug/armeabi-v7a
+native-lib
+jvmArgs : 
+

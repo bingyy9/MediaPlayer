@@ -1,0 +1,11 @@
+# ninja log v5
+4	168	1615725638	CMakeFiles/native-lib.dir/JavaPlayerCaller.cpp.o	303aa89cd73d929b
+10	169	1615725638	CMakeFiles/native-lib.dir/DZJNICall.cpp.o	26ca7641977bf73
+1	886	1615725638	CMakeFiles/native-lib.dir/native-lib.cpp.o	52215e4d996cf27d
+3	907	1615725639	CMakeFiles/native-lib.dir/FFMPEG.cpp.o	f324481cb3a76ea3
+5	940	1615725639	CMakeFiles/native-lib.dir/AudioChannel.cpp.o	6eb81346e93ca143
+6	947	1615725639	CMakeFiles/native-lib.dir/VideoChannel.cpp.o	c58a82ef11b5c67b
+3	316	1615725659	CMakeFiles/native-lib.dir/DZFFmpeg.cpp.o	968c5a16696b5268
+316	2480	1615725660	/Users/bingy/Material/My_Documents/011_FFMPEG-master/app/build/intermediates/cmake/debug/obj/armeabi-v7a/libnative-lib.so	8c048e7f6785d6db
+2	956	1615725707	CMakeFiles/native-lib.dir/native-lib.cpp.o	52215e4d996cf27d
+956	2908	1615725708	/Users/bingy/Material/My_Documents/011_FFMPEG-master/app/build/intermediates/cmake/debug/obj/armeabi-v7a/libnative-lib.so	8c048e7f6785d6db
