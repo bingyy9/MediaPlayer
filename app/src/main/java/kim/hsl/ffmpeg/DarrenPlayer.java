@@ -2,6 +2,7 @@ package kim.hsl.ffmpeg;
 
 import android.preference.MultiSelectListPreference;
 import android.text.TextUtils;
+import android.util.Log;
 
 import kim.hsl.ffmpeg.listener.MediaErrorListener;
 
@@ -15,6 +16,7 @@ class DarrenPlayer {
 
     //invoke from JNI
     private void onError(int code, String msg){
+        Log.e("DarrenPlayer", "code: " + code + " msg: " + msg);
         if(mErrorListener != null){
             mErrorListener.onError(code, msg);
         }
@@ -34,5 +36,4 @@ class DarrenPlayer {
 
     private native void play0(String url);
 
-    private native void play1(String url);
 }

@@ -240,9 +240,6 @@ public class MainActivity extends Activity {
         darrenPlayer.setDataSource(mMusicFile.getAbsolutePath());
         darrenPlayer.play();
 
-
-
-
     }
 
     private AudioTrack createAudioTrack(int sampleRateInHz, int nb_channels) {

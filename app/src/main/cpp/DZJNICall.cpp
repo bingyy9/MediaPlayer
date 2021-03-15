@@ -5,9 +5,15 @@
 #include "DZJNICall.h"
 #include "DZConstDefine.h"
 
-DZJNICall::DZJNICall(JavaVM *javaVM, JNIEnv *jniEnv) {
+DZJNICall::DZJNICall(JavaVM *javaVM, JNIEnv *jniEnv, jobject obj) {
     this->javaVM = javaVM;
     this->jniEnv = jniEnv;
+    this->jDarrenPlayObj = obj;
+
+//    jclass playerClz = jniEnv->FindClass("kim/hsl/ffmpeg/DarrenPlayer");
+    jclass playerClz = jniEnv->GetObjectClass(jDarrenPlayObj);
+    jDarrenPlayErrorMid= jniEnv->GetMethodID(playerClz, "onError", "(ILjava/lang/String;)V");
+    LOGE("jDarrenPlayErrorMid = ");
     initCreateAudioTrack();
 }
 
@@ -39,4 +45,11 @@ void DZJNICall::initCreateAudioTrack() {
 
 void DZJNICall::callAudioTrackWrite(jbyteArray audioData, int offsetInBytes, int sizeInBytes) {
     jniEnv->CallIntMethod(jAudioTrackObj, jAdudioTrackWriteMid, audioData, offsetInBytes, sizeInBytes);
+}
+
+void DZJNICall::onPlayError(int code, char *msg) {
+    LOGE("onPlayError code %d, msg %s ", code, msg);
+    jstring jmsg = jniEnv->NewStringUTF(msg);
+    jniEnv->CallVoidMethod(jDarrenPlayObj, jDarrenPlayErrorMid, code, jmsg);
+    jniEnv->DeleteLocalRef(jmsg);
 }

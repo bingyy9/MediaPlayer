@@ -30,7 +30,10 @@ public:
 
 public:
     void play();
+    void onJniPlayError(int code, char *msg);
 
+private:
+    void release();
 };
 
 #endif //INC_011_FFMPEG_MASTER_DZFFMPEG_H

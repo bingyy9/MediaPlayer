@@ -11,11 +11,15 @@ class DZJNICall{
 public:
     jobject jAudioTrackObj;
     jmethodID jAdudioTrackWriteMid;
+    jmethodID jDarrenPlayErrorMid;
     JavaVM *javaVM;
     JNIEnv *jniEnv;
+    jobject jDarrenPlayObj;
+
+    void onPlayError(int code, char *msg);
 
 public:
-    DZJNICall(JavaVM *javaVM, JNIEnv *jniEnv);
+    DZJNICall(JavaVM *javaVM, JNIEnv *jniEnv, jobject obj);
     ~DZJNICall();
     void callAudioTrackWrite(jbyteArray audioData, int offsetInBytes, int sizeInBytes);
 

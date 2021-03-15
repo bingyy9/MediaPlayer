@@ -7,6 +7,7 @@
 JavaPlayerCaller::JavaPlayerCaller(JavaVM *vm, JNIEnv *env, jobject instance) {
 
 
+
     /*
      * 如果在子线程调用 Java 方方法
      *      需要借助 JavaVM * vm , 获取子线程的 JNIEnv *env 进行反射调用
