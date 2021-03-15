@@ -20,22 +20,11 @@ void DZFFmpeg::play() {
     av_register_all();
     avformat_network_init();
     AVFormatContext *pFormatContext = NULL;
-    int formatOpenInputRes = 0;
-    int avformatFindStreamInfo = 0;
-    int audioStreamIndex = -1;
     AVCodecParameters *pCodecParameters = NULL;
     AVCodec *pCodec = NULL;
     AVCodecContext* pCodecContext = NULL;
-    int avcodecParametersToContextRes = -1;
-    int avcodecOpenRes = -1;
-    int index = 0;
-    AVPacket *pPacket = NULL;
-    AVFrame *pFrame = NULL;
-    int avSamplesBufferSize = 0;
-    jbyteArray jPcmByteArray = NULL;
-    jbyte* jPcmData = NULL;
 
-    formatOpenInputRes = avformat_open_input(&pFormatContext, url, NULL, NULL);
+    int formatOpenInputRes = avformat_open_input(&pFormatContext, url, NULL, NULL);
     if(formatOpenInputRes != 0){
         //回调Java层
         //释放资源
@@ -44,7 +33,7 @@ void DZFFmpeg::play() {
         return;
     }
 
-    avformatFindStreamInfo = avformat_find_stream_info(pFormatContext, NULL);
+    int avformatFindStreamInfo = avformat_find_stream_info(pFormatContext, NULL);
     if(avformatFindStreamInfo < 0){
         LOGE("avformat_find_stream_info error: %s", av_err2str(avformatFindStreamInfo));
         onJniPlayError(FIND_STREAM_INFO_ERROR_CODE, av_err2str(avformatFindStreamInfo));
@@ -52,7 +41,7 @@ void DZFFmpeg::play() {
     }
 
     //查找音频流的index
-    audioStreamIndex = av_find_best_stream(pFormatContext, AVMediaType::AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
+    int audioStreamIndex = av_find_best_stream(pFormatContext, AVMediaType::AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
     if(audioStreamIndex < 0){
         LOGE("av_find_best_stream find audio stream error: %s", av_err2str(audioStreamIndex));
         onJniPlayError(FIND_BEST_STREAM_ERROR_CODE, av_err2str(audioStreamIndex));
@@ -77,13 +66,13 @@ void DZFFmpeg::play() {
         return;
     }
 
-    avcodecParametersToContextRes = avcodec_parameters_to_context(pCodecContext, pCodecParameters);
+    int avcodecParametersToContextRes = avcodec_parameters_to_context(pCodecContext, pCodecParameters);
     if(avcodecParametersToContextRes  < 0){
         LOGE("codec parameters to context error : %s ", av_err2str(avcodecParametersToContextRes));
         onJniPlayError(AVCODEC_PARAM_TO_CONTEXT_ERROR_CODE, av_err2str(avcodecParametersToContextRes));
         return;
     }
-    avcodecOpenRes = avcodec_open2(pCodecContext, pCodec, NULL);
+    int avcodecOpenRes = avcodec_open2(pCodecContext, pCodec, NULL);
     if(avcodecOpenRes != 0){
         LOGE("codec audio open fail : %s ", av_err2str(avcodecOpenRes));
         onJniPlayError(AVCODEC_OPEN_2_ERROR_CODE, av_err2str(avcodecOpenRes));
@@ -116,16 +105,17 @@ void DZFFmpeg::play() {
     //1帧不是1秒， 1秒都多少帧pFrame->nb_samples
     //size是播放指定的大小，是最终输出的大小
     int outChannels = av_get_channel_layout_nb_channels(out_ch_layout);
-    avSamplesBufferSize = av_samples_get_buffer_size(NULL, outChannels, pCodecParameters->frame_size, out_sample_fmt, 0);
+    int avSamplesBufferSize = av_samples_get_buffer_size(NULL, outChannels, pCodecParameters->frame_size, out_sample_fmt, 0);
 
     uint8_t *resampleOutBuffer = (uint8_t *)malloc(avSamplesBufferSize);
     //-------------重采样end
 
-    jPcmByteArray = pJniCall->jniEnv->NewByteArray(avSamplesBufferSize);
-    jPcmData = pJniCall->jniEnv->GetByteArrayElements(jPcmByteArray, NULL);
+    jbyteArray jPcmByteArray = pJniCall->jniEnv->NewByteArray(avSamplesBufferSize);
+    jbyte *jPcmData = pJniCall->jniEnv->GetByteArrayElements(jPcmByteArray, NULL);
 
-    pPacket = av_packet_alloc();
-    pFrame = av_frame_alloc();
+    AVPacket *pPacket = av_packet_alloc();
+    AVFrame *pFrame = av_frame_alloc();
+    int index = 0;
     while(av_read_frame(pFormatContext, pPacket) >= 0){
         if(pPacket->stream_index == audioStreamIndex) {
             //Packet包，压缩的数据，解码成pcm数据

@@ -1,14 +1,7 @@
 ninja: Entering directory `/Users/bingy/Material/My_Documents/011_FFMPEG-master/app/.cxx/cmake/debug/armeabi-v7a'
-[1/2] Building CXX object CMakeFiles/native-lib.dir/native-lib.cpp.o
+[1/2] Building CXX object CMakeFiles/native-lib.dir/DZFFmpeg.cpp.o
 clang++: warning: argument unused during compilation: '-L/Users/bingy/Material/My_Documents/011_FFMPEG-master/app/src/main/cpp/lib' [-Wunused-command-line-argument]
-In file included from /Users/bingy/Material/My_Documents/011_FFMPEG-master/app/src/main/cpp/native-lib.cpp:16:
-/Users/bingy/Material/My_Documents/011_FFMPEG-master/app/src/main/cpp/FFMPEG.h:22:9: warning: 'LOGE' macro redefined [-Wmacro-redefined]
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR,"FFMPEG",__VA_ARGS__)
-        ^
-/Users/bingy/Material/My_Documents/011_FFMPEG-master/app/src/main/cpp/DZConstDefine.h:10:9: note: previous definition is here
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
-        ^
-/Users/bingy/Material/My_Documents/011_FFMPEG-master/app/src/main/cpp/native-lib.cpp:230:5: warning: 'av_register_all' is deprecated [-Wdeprecated-declarations]
+/Users/bingy/Material/My_Documents/011_FFMPEG-master/app/src/main/cpp/DZFFmpeg.cpp:20:5: warning: 'av_register_all' is deprecated [-Wdeprecated-declarations]
     av_register_all();
     ^
 /Users/bingy/Material/My_Documents/011_FFMPEG-master/app/src/main/cpp/include/libavformat/avformat.h:2024:1: note: 'av_register_all' has been explicitly marked deprecated here
@@ -17,5 +10,17 @@ attribute_deprecated
 /Users/bingy/Material/My_Documents/011_FFMPEG-master/app/src/main/cpp/include/libavutil/attributes.h:94:49: note: expanded from macro 'attribute_deprecated'
 #    define attribute_deprecated __attribute__((deprecated))
                                                 ^
-2 warnings generated.
+/Users/bingy/Material/My_Documents/011_FFMPEG-master/app/src/main/cpp/DZFFmpeg.cpp:56:55: warning: ISO C++11 does not allow conversion from string literal to 'char *' [-Wwritable-strings]
+        onJniPlayError(CODED_FIND_DECODER_ERROR_CODE, "avCodec is null");
+                                                      ^
+/Users/bingy/Material/My_Documents/011_FFMPEG-master/app/src/main/cpp/DZFFmpeg.cpp:65:53: warning: ISO C++11 does not allow conversion from string literal to 'char *' [-Wwritable-strings]
+        onJniPlayError(ALLOCATE_CONTEXT_ERROR_CODE, "pCodecContext is null");
+                                                    ^
+/Users/bingy/Material/My_Documents/011_FFMPEG-master/app/src/main/cpp/DZFFmpeg.cpp:95:51: warning: ISO C++11 does not allow conversion from string literal to 'char *' [-Wwritable-strings]
+        onJniPlayError(AVCODEC_OPEN_2_ERROR_CODE, "swrContext is null");
+                                                  ^
+/Users/bingy/Material/My_Documents/011_FFMPEG-master/app/src/main/cpp/DZFFmpeg.cpp:100:51: warning: ISO C++11 does not allow conversion from string literal to 'char *' [-Wwritable-strings]
+        onJniPlayError(AVCODEC_OPEN_2_ERROR_CODE, "swrInitRes < 0 is null");
+                                                  ^
+5 warnings generated.
 [2/2] Linking CXX shared library /Users/bingy/Material/My_Documents/011_FFMPEG-master/app/build/intermediates/cmake/debug/obj/armeabi-v7a/libnative-lib.so
