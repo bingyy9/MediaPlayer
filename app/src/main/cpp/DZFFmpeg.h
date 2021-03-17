@@ -11,26 +11,32 @@ extern "C" {
 };
 
 #include "DZJNICall.h"
+#include "DZAudio.h"
 #include "DZConstDefine.h"
+#include <pthread.h>
 
 
 class DZFFmpeg{
 public:
     AVFormatContext *pFormatContext = NULL;
-//    AVCodecParameters *pCodecParameters = NULL;
-//    AVCodec *pCodec = NULL;
     AVCodecContext* pCodecContext = NULL;
     SwrContext *swrContext = NULL;
-    uint8_t *resampleOutBuffer = NULL;
-    const char* url = NULL;
+    char* url = NULL;
     DZJNICall *pJniCall = NULL;
+    DZAudio *pAudio = NULL;
+    uint8_t *resampleOutBuffer = NULL;
+
 public:
     DZFFmpeg(DZJNICall *dzjniCall, const char* url);
     ~DZFFmpeg();
 
 public:
     void play();
-    void onJniPlayError(int code, char *msg);
+    void onJniPlayError(ThreadMode threadMode, int code, char *msg);
+    void prepare();
+    void prepareAsync();
+    void prepare(ThreadMode threadMode);
+    void prepareAsync(ThreadMode threadMode);
 
 private:
     void release();

@@ -4941,7 +4941,7 @@ int avcodec_receive_packet(AVCodecContext *avctx, AVPacket *avpkt);
  *   is actually supported varies. Some do this check only after the user's
  *   get_format callback returns.)
  * - The hw_pix_fmt must be one of the choices suggested by get_format. If the
- *   user decides to use a AVHWFramesContext prepared with this API function,
+ *   user decides to use a AVHWFramesContext prepare with this API function,
  *   the user must return the same hw_pix_fmt from get_format.
  * - The device_ref passed to this function must support the given hw_pix_fmt.
  * - After calling this API function, it is the user's responsibility to

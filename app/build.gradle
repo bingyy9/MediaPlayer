@@ -17,7 +17,7 @@ android {
         //     defaultConfig 外部的 externalNativeBuild 配置的是 CMakeList.txt 或 Android1.mk 构建脚本的路径
         externalNativeBuild {
             cmake {
-                cppFlags ""
+                cppFlags "-fexceptions"
 
                 //配置编译 C/C++ 源文件为哪几个 CPU 指令集的函数库 (arm , x86 等)
                 abiFilters "armeabi-v7a"

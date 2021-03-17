@@ -3,6 +3,8 @@ package kim.hsl.ffmpeg;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import kim.hsl.ffmpeg.listener.MediaErrorListener;
+import kim.hsl.ffmpeg.listener.MediaPreparedListener;
 
 import android.Manifest;
 import android.app.Activity;
@@ -25,7 +27,7 @@ import android.widget.Toast;
 
 import java.io.File;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements MediaPreparedListener, MediaErrorListener {
 
     private static final String TAG = "FFMPEG";
 
@@ -122,6 +124,8 @@ public class MainActivity extends Activity {
         //创建播放器
         player = new Player();
         darrenPlayer = new DarrenPlayer();
+        darrenPlayer.setErrorListener(this);
+        darrenPlayer.setMediaPreparedListener(this);
 
         //设置视频显示组件
         player.setSurfaceView(surfaceView);
@@ -236,10 +240,10 @@ public class MainActivity extends Activity {
     }
 
     private void testDarrenPlayer(){
+//        File mMusicFile = new File(Environment.getExternalStorageDirectory(), "16k.pcm");
         File mMusicFile = new File(Environment.getExternalStorageDirectory(), "qqmusic/song/纸短情长.mp3");
         darrenPlayer.setDataSource(mMusicFile.getAbsolutePath());
-        darrenPlayer.play();
-
+        darrenPlayer.prepareAsync();
     }
 
     private AudioTrack createAudioTrack(int sampleRateInHz, int nb_channels) {
@@ -257,5 +261,16 @@ public class MainActivity extends Activity {
 
         AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, sampleRateInHz, channelConfig, audioFormat, bufferSizeInBytes, AudioTrack.MODE_STREAM);
         return audioTrack;
+    }
+
+    @Override
+    public void onError(int code, String msg) {
+
+    }
+
+    @Override
+    public void onPrepared() {
+        Log.e(TAG, "onPrepared");
+        darrenPlayer.play();
     }
 }

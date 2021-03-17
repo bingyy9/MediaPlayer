@@ -3,6 +3,9 @@
 
 //本地窗口 , 在 Native 层处理图像绘制
 #include <android/native_window_jni.h>
+#include <malloc.h>
+//#include <SELS/OpenSELS.h>
+//#include <SELS/OpenSLES_Android.h>
 
 //在C++中采用C的方式编译，因为ffmpeg都是C语言写的
 extern "C" {
@@ -12,6 +15,9 @@ extern "C" {
 #include "DZConstDefine.h"
 #include "DZJNICall.h"
 #include "DZFFmpeg.h"
+#include "DZAudio.h"
+
+
 
 #include "FFMPEG.h"
 
@@ -35,13 +41,13 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 JavaPlayerCaller * javaCallHelper;
 
 //JNI_OnLoad 中获取的 Java 虚拟机对象放在这里
-JavaVM *javaVM;
-int JNI_OnLoad(JavaVM *vm, void *r){
-
-    javaVM = vm;
-
-    return JNI_VERSION_1_6;
-}
+JavaVM *pJavaVM;
+//int JNI_OnLoad(JavaVM *vm, void *r){
+//
+//    javaVM = vm;
+//
+//    return JNI_VERSION_1_6;
+//}
 
 /**
  * 解码后的图片绘制方法
@@ -122,7 +128,7 @@ Java_kim_hsl_ffmpeg_Player_native_1prepare(JNIEnv *env, jobject instance, jstrin
     const char *dataSource = env->GetStringUTFChars(dataSource_, 0);
 
     //创建 Java 调用类
-    javaCallHelper = new JavaPlayerCaller(javaVM, env, instance);
+    javaCallHelper = new JavaPlayerCaller(pJavaVM, env, instance);
 
     //在 FFMPEG.cpp 中声明的构造函数
     ffmpeg = new FFMPEG(javaCallHelper, dataSource);
@@ -220,16 +226,72 @@ Java_kim_hsl_ffmpeg_Player_native_1seek(JNIEnv *env, jobject thiz, jint progress
     }
 }
 
-DZJNICall *pDZJNICall;
-DZFFmpeg *pDZFFmpeg;
+DZJNICall *pDZJNICall = NULL;
+DZFFmpeg *pDZFFmpeg = NULL;
+
+
+//重写so被加载时调用的一个方法
+//去了解动态注册
+extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *javaVm, void *reserved){
+    LOGE("JNI_OnLoad=====");
+    pJavaVM = javaVm;
+    JNIEnv *env;
+    if(pJavaVM->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_4) != JNI_OK){
+        return -1;
+    }
+    return JNI_VERSION_1_4;
+}
+
 
 extern "C" JNIEXPORT void JNICALL
 Java_kim_hsl_ffmpeg_DarrenPlayer_play0(JNIEnv *env, jobject thiz, jstring url_) {
-    pDZJNICall = new DZJNICall(NULL, env, thiz);
+    if(pDZFFmpeg != NULL){
+        pDZFFmpeg->play();
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL Java_kim_hsl_ffmpeg_DarrenPlayer_openSLES_1Play(JNIEnv *env, jobject thiz, jstring url_) {
+    // TODO: implement openSLES_Play()
+    const char* url = env->GetStringUTFChars(url_, NULL);
+//    pcmFile = fopen(url, "r");
+//    //sample 44.1khz, 2 channels, 16bytes
+//    pcmBuffer = malloc(44100*2*2);
+//    initCreateOpenSELS();
+    env->ReleaseStringUTFChars(url_, url);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_kim_hsl_ffmpeg_DarrenPlayer_prepare0(JNIEnv *env, jobject thiz, jstring url_) {
+    if(pDZJNICall == NULL){
+        pDZJNICall = new DZJNICall(pJavaVM, env, thiz);
+    }
+
     const char* url = env->GetStringUTFChars(url_, 0);
-    pDZFFmpeg = new DZFFmpeg(pDZJNICall, url);
+    if(pDZFFmpeg == NULL){
+        pDZFFmpeg = new DZFFmpeg(pDZJNICall, url);
+
+    }
+    pDZFFmpeg->prepare();
+
     pDZFFmpeg->play();
-    delete pDZJNICall;
-    delete pDZFFmpeg;
+//    delete pDZJNICall;
+//    delete pDZFFmpeg;
+    env->ReleaseStringUTFChars(url_, url);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_kim_hsl_ffmpeg_DarrenPlayer_prepareAsync0(JNIEnv *env, jobject thiz, jstring url_) {
+    if(pDZJNICall == NULL){
+        pDZJNICall = new DZJNICall(pJavaVM, env, thiz);
+    }
+
+    const char* url = env->GetStringUTFChars(url_, 0);
+    if(pDZFFmpeg == NULL){
+        pDZFFmpeg = new DZFFmpeg(pDZJNICall, url);
+
+    }
+    pDZFFmpeg->prepareAsync();
+
+    pDZFFmpeg->play();
+//    delete pDZJNICall;
+//    delete pDZFFmpeg;
     env->ReleaseStringUTFChars(url_, url);
 }
