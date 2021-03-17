@@ -29,7 +29,7 @@ import java.io.File;
 
 public class MainActivity extends Activity implements MediaPreparedListener, MediaErrorListener {
 
-    private static final String TAG = "FFMPEG";
+    private static final String TAG = "MainActivity";
 
     /**
      * 视频显示组件

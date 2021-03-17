@@ -17,7 +17,9 @@ add_library( # 参数 1 : 设置生成的动态库名称
         DZConstDefine.h
         DZJNICall.cpp
         DZFFmpeg.cpp
-        DZAudio.cpp)
+        DZAudio.cpp
+        DZAVPacketQueue.cpp
+        DZPlayerStatus.cpp)
 
 # III . 到预设的目录查找 log 库 , 将找到的路径赋值给 log-lib
 #       这个路径是 NDK 的 ndk-bundle\platforms\android-29\arch-arm\usr\lib\liblog.so

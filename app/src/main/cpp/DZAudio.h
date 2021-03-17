@@ -17,6 +17,8 @@ extern "C" {
 
 #include "DZJNICall.h"
 #include "DZConstDefine.h"
+#include "DZAVPacketQueue.h"
+#include "DZPlayerStatus.h"
 
 
 class DZAudio{
@@ -49,6 +51,9 @@ public:
     // aux effect on the output mix, used by the buffer queue player
     const SLEnvironmentalReverbSettings reverbSettings =
             SL_I3DL2_ENVIRONMENT_PRESET_STONECORRIDOR;
+    DZAVPacketQueue* pPacketQueue = NULL;
+    DZPlayerStatus* pPlayerStatus = NULL;
+    bool async = true;
 
 public:
     DZAudio(int audioStreamIndex, DZJNICall *jniCall, AVCodecContext *codecContext, AVFormatContext *formatContext, SwrContext *swrContext);
@@ -59,6 +64,7 @@ public:
     void initCreateOpenSELS();
 
     int resampleAudio();
+    int resampleAudio2();
 
     static void bqPlayerCallbackDN(SLAndroidSimpleBufferQueueItf bq, void *context);
 

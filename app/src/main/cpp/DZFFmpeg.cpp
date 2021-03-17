@@ -132,6 +132,8 @@ void DZFFmpeg::prepare(ThreadMode threadMode) {
         return;
     }
 
+
+
     pCodecParameters = pFormatContext->streams[audioStreamIndex]->codecpar;
     //查找解码
     pCodec = avcodec_find_decoder(pCodecParameters->codec_id);
@@ -286,6 +288,8 @@ void DZFFmpeg::prepareAsync(ThreadMode threadMode) {
         onJniPlayError(threadMode, FIND_BEST_STREAM_ERROR_CODE, av_err2str(audioStreamIndex));
         return;
     }
+
+    pAudio = new DZAudio(audioStreamIndex, pJniCall, pCodecContext, pFormatContext, swrContext);
 
     pCodecParameters = pFormatContext->streams[audioStreamIndex]->codecpar;
     //查找解码

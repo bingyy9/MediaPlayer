@@ -290,7 +290,7 @@ extern "C" JNIEXPORT void JNICALL Java_kim_hsl_ffmpeg_DarrenPlayer_prepareAsync0
     }
     pDZFFmpeg->prepareAsync();
 
-    pDZFFmpeg->play();
+//    pDZFFmpeg->play();
 //    delete pDZJNICall;
 //    delete pDZFFmpeg;
     env->ReleaseStringUTFChars(url_, url);
