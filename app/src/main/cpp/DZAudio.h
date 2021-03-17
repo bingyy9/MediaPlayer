@@ -53,10 +53,10 @@ public:
             SL_I3DL2_ENVIRONMENT_PRESET_STONECORRIDOR;
     DZAVPacketQueue* pPacketQueue = NULL;
     DZPlayerStatus* pPlayerStatus = NULL;
-    bool async = true;
+    bool async = false;
 
 public:
-    DZAudio(int audioStreamIndex, DZJNICall *jniCall, AVCodecContext *codecContext, AVFormatContext *formatContext, SwrContext *swrContext);
+    DZAudio(int audioStreamIndex, DZJNICall *jniCal, AVFormatContext *pFormatContext);
     ~DZAudio();
 
     void play();
@@ -68,6 +68,11 @@ public:
 
     static void bqPlayerCallbackDN(SLAndroidSimpleBufferQueueItf bq, void *context);
 
+    void analysisStream(ThreadMode mode, AVStream **pStream);
+
+    void onJniPlayError(ThreadMode threadMode, int code, char *msg);
+
+    void audio_release();
 };
 
 

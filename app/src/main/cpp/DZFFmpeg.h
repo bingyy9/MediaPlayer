@@ -19,12 +19,9 @@ extern "C" {
 class DZFFmpeg{
 public:
     AVFormatContext *pFormatContext = NULL;
-    AVCodecContext* pCodecContext = NULL;
-    SwrContext *swrContext = NULL;
     char* url = NULL;
     DZJNICall *pJniCall = NULL;
     DZAudio *pAudio = NULL;
-    uint8_t *resampleOutBuffer = NULL;
 
 public:
     DZFFmpeg(DZJNICall *dzjniCall, const char* url);
