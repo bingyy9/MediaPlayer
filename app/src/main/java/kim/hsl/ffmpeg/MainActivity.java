@@ -8,6 +8,7 @@ import kim.hsl.ffmpeg.listener.MediaPreparedListener;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -21,6 +22,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -49,6 +51,7 @@ public class MainActivity extends Activity implements MediaPreparedListener, Med
     private SeekBar seekBar;
 
     DarrenPlayer darrenPlayer;
+
 
     /**
      * 需要获取的权限列表
@@ -215,7 +218,8 @@ public class MainActivity extends Activity implements MediaPreparedListener, Med
             }
         });
 
-        testDarrenPlayer();
+//        testDarrenPlayer();
+        testDarrenVideoPlayer();
     }
     /**
      * 播放
@@ -246,6 +250,16 @@ public class MainActivity extends Activity implements MediaPreparedListener, Med
         File mMusicFile = new File(Environment.getExternalStorageDirectory(), "qqmusic/song/纸短情长.mp3");
         darrenPlayer.setDataSource(mMusicFile.getAbsolutePath());
         darrenPlayer.prepareAsync();
+    }
+
+    private void testDarrenVideoPlayer(){
+//        File mVideoFile = new File(Environment.getExternalStorageDirectory(), "屌丝男士.mov");
+//        darrenPlayer.setDataSource(mVideoFile.getAbsolutePath());
+//        darrenPlayer.decodeVideo(surfaceView.getHolder().getSurface());
+
+        Intent welcomeIntent = new Intent(this, DarrenPlayerActivity.class);
+        welcomeIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(welcomeIntent);
     }
 
     private AudioTrack createAudioTrack(int sampleRateInHz, int nb_channels) {

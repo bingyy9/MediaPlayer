@@ -1,8 +1,8 @@
 package kim.hsl.ffmpeg;
 
-import android.preference.MultiSelectListPreference;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Surface;
 
 import kim.hsl.ffmpeg.listener.MediaErrorListener;
 import kim.hsl.ffmpeg.listener.MediaPreparedListener;
@@ -44,12 +44,15 @@ class DarrenPlayer {
         if(TextUtils.isEmpty(url)){
             throw new NullPointerException("url is null");
         }
-        play0(url);
-//        openSLES_Play(url);
-        decodeVieo0(url);
+        play0(url); // this is for audio play
+//        decodeVieo0(url);
     }
 
-    private native void decodeVieo0(String url);
+    public void decodeVideo(Surface surface){
+        decodeVieo0(surface, url);
+    }
+
+    private native void decodeVieo0(Surface surface, String url);
 
     private native void play0(String url);
 

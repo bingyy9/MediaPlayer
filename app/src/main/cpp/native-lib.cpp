@@ -2,6 +2,7 @@
 #include <string>
 
 //本地窗口 , 在 Native 层处理图像绘制
+#include <android/native_window.h>
 #include <android/native_window_jni.h>
 #include <malloc.h>
 //#include <SELS/OpenSELS.h>
@@ -11,6 +12,8 @@
 extern "C" {
 #include "libavformat/avformat.h"
 #include "libswresample/swresample.h"
+#include "libswscale/swscale.h"
+#include "libavutil/imgutils.h"
 }
 #include "DZConstDefine.h"
 #include "DZJNICall.h"
@@ -296,12 +299,129 @@ extern "C" JNIEXPORT void JNICALL Java_kim_hsl_ffmpeg_DarrenPlayer_prepareAsync0
     env->ReleaseStringUTFChars(url_, url);
 }
 
-extern "C" JNIEXPORT void JNICALL Java_kim_hsl_ffmpeg_DarrenPlayer_decodeVieo0(JNIEnv *env, jobject thiz, jstring url) {
+extern "C" JNIEXPORT void JNICALL Java_kim_hsl_ffmpeg_DarrenPlayer_decodeVieo0(JNIEnv *env, jobject thiz, jobject surface, jstring url_) {
     LOGE("native decode video entrance");
-    const char* str = env->GetStringUTFChars(url, NULL);
+    const char* url = env->GetStringUTFChars(url_, NULL);
+
+    av_register_all();
+    avformat_network_init();
+    AVFormatContext *pFormatContext = NULL;
+    AVCodecParameters *pCodecParameters = NULL;
+    AVCodec *pCodec = NULL;
+    AVCodecContext* pCodecContext = NULL;
+
+    LOGE("DZFFmpeg::prepare url = %s", url);
+    int formatOpenInputRes = avformat_open_input(&pFormatContext, url, NULL, NULL);
+    if(formatOpenInputRes != 0){
+        //回调Java层
+        //释放资源
+        LOGE("format open input error: %s", av_err2str(formatOpenInputRes));
+//        onJniPlayError(threadMode, FIND_STREAM_ERROR_CODE, av_err2str(formatOpenInputRes));
+        return;
+    }
+
+    int avformatFindStreamInfo = avformat_find_stream_info(pFormatContext, NULL);
+    if(avformatFindStreamInfo < 0){
+        LOGE("avformat_find_stream_info error: %s", av_err2str(avformatFindStreamInfo));
+//        onJniPlayError(threadMode, FIND_STREAM_INFO_ERROR_CODE, av_err2str(avformatFindStreamInfo));
+        return;
+    }
+
+    //查找音频流的index
+    int videoStreamIndex = av_find_best_stream(pFormatContext, AVMediaType::AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+    if(videoStreamIndex < 0){
+        LOGE("av_find_best_stream find audio stream error: %s", av_err2str(videoStreamIndex));
+//        onJniPlayError(threadMode, FIND_BEST_STREAM_ERROR_CODE, av_err2str(videoStreamIndex));
+        return;
+    }
 
 
+    pCodecParameters = pFormatContext->streams[videoStreamIndex]->codecpar;
+    //查找解码
+    pCodec = avcodec_find_decoder(pCodecParameters->codec_id);
+    if(pCodec == NULL){
+        LOGE("avCodec is null");
+//        onJniPlayError(threadMode, CODED_FIND_DECODER_ERROR_CODE, "avCodec is null");
+        return;
+    }
 
-    env->ReleaseStringUTFChars(url, str);
+
+    //打开解码器
+    pCodecContext = avcodec_alloc_context3(pCodec);
+    if(pCodecContext == NULL){
+        LOGE("pCodecContext is null");
+//        onJniPlayError(threadMode, ALLOCATE_CONTEXT_ERROR_CODE, "pCodecContext is null");
+        return;
+    }
+
+    int avcodecParametersToContextRes = avcodec_parameters_to_context(pCodecContext, pCodecParameters);
+    if(avcodecParametersToContextRes  < 0){
+        LOGE("codec parameters to context error : %s ", av_err2str(avcodecParametersToContextRes));
+//        onJniPlayError(threadMode, AVCODEC_PARAM_TO_CONTEXT_ERROR_CODE, av_err2str(avcodecParametersToContextRes));
+        return;
+    }
+    int avcodecOpenRes = avcodec_open2(pCodecContext, pCodec, NULL);
+    if(avcodecOpenRes != 0){
+        LOGE("codec audio open fail : %s ", av_err2str(avcodecOpenRes));
+//        onJniPlayError(threadMode, AVCODEC_OPEN_2_ERROR_CODE, av_err2str(avcodecOpenRes));
+        return;
+    }
+//    avcodec_open2(pFormatContext->streams[videoStreamIndex]->codec, pCodec, NULL);
+
+    LOGE("%d, %d", pCodecParameters->sample_rate, pCodecParameters->channels);
+
+    //获取窗体
+    ANativeWindow* pNativeWindow = ANativeWindow_fromSurface(env, surface);
+    //设置缓冲区属性
+    ANativeWindow_setBuffersGeometry(pNativeWindow, pCodecContext->width, pCodecContext->height, WINDOW_FORMAT_RGBA_8888);
+    //缓冲区Window的buffer
+    ANativeWindow_Buffer outBuffer;
+
+    //初始化转换上下文
+    SwsContext *swsContext = sws_getContext(pCodecContext->width, pCodecContext->height, pCodecContext->pix_fmt
+        , pCodecContext->width, pCodecContext->height, AV_PIX_FMT_RGBA
+        , SWS_BILINEAR, NULL, NULL, NULL);
+    AVFrame *pRGBAFrame = av_frame_alloc();  //存储解压后转换后的数据
+    int frameSize = av_image_get_buffer_size(AV_PIX_FMT_RGBA, pCodecContext->width, pCodecContext->height, 1);
+    uint8_t *frameBuffer = (uint8_t *) malloc(frameSize * sizeof(uint8_t));
+    av_image_fill_arrays(pRGBAFrame->data, pRGBAFrame->linesize, frameBuffer, AV_PIX_FMT_RGBA, pCodecContext->width, pCodecContext->height, 1);
+
+    AVPacket *pPacket = av_packet_alloc();
+    AVFrame *pFrame = av_frame_alloc();  //存储原理解压后的数据
+    int index = 0;
+    while(av_read_frame(pFormatContext, pPacket) >= 0){
+        if(pPacket->stream_index == videoStreamIndex) {
+            //Packet包，压缩的数据，解码成pcm数据
+            int avcodecSendPacketRes = avcodec_send_packet(pCodecContext, pPacket);
+            if (avcodecSendPacketRes == 0) {
+                int avcodecReceiveFrameRes = avcodec_receive_frame(pCodecContext, pFrame);
+                if (avcodecReceiveFrameRes == 0) {
+                    //已经把AVPacket解码成AVFrame
+                    index++;
+                    LOGE("解码第%d帧", index);
+
+                    //pFrame->data一般都是YUV420P的。SurfaceView需要显示RGBA8888，因此需要转换。
+                    sws_scale(swsContext, pFrame->data, pFrame->linesize, 0, pCodecContext->height
+                        , pRGBAFrame->data, pRGBAFrame->linesize);
+                    //拿到转换后的RGBA8888data后如何渲染？ 放入缓冲区
+                    ANativeWindow_lock(pNativeWindow, &outBuffer, NULL);
+                    memcpy(outBuffer.bits, frameBuffer, frameSize);
+                    ANativeWindow_unlockAndPost(pNativeWindow);
+                }
+            }
+        }
+
+        //解引用
+        av_packet_unref(pPacket);
+        av_frame_unref(pFrame);
+    }
+
+//    pFrame->data
+
+    //1. 解引用数据data 2. 销毁pPacket结构体内存 3. pPacket = NULL
+    av_packet_free(&pPacket);
+    av_frame_free(&pFrame);
+
+    env->ReleaseStringUTFChars(url_, url);
 
 }
