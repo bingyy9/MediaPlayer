@@ -367,7 +367,7 @@ void DZAudio::analysisStream(ThreadMode threadMode, AVStream **streams) {
     //size是播放指定的大小，是最终输出的大小
 //    int outChannels = av_get_channel_layout_nb_channels(out_ch_layout);
 //    int avSamplesBufferSize = av_samples_get_buffer_size(NULL, outChannels, pCodecParameters->frame_size, out_sample_fmt, 0);
-//    resampleOutBuffer = (uint8_t *)(malloc(pCodecContext->frame_size * 2 * 2));
+    resampleOutBuffer = (uint8_t *)(malloc(pCodecContext->frame_size * 2 * 2));
 //    uint8_t *resampleOutBuffer = (uint8_t *)malloc(avSamplesBufferSize);
 }
 

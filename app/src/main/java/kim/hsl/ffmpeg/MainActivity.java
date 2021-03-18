@@ -31,6 +31,8 @@ public class MainActivity extends Activity implements MediaPreparedListener, Med
 
     private static final String TAG = "MainActivity";
 
+    private DZVideoView mVideoView;
+
     /**
      * 视频显示组件
      */

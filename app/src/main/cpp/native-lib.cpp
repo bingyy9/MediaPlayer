@@ -295,3 +295,13 @@ extern "C" JNIEXPORT void JNICALL Java_kim_hsl_ffmpeg_DarrenPlayer_prepareAsync0
 //    delete pDZFFmpeg;
     env->ReleaseStringUTFChars(url_, url);
 }
+
+extern "C" JNIEXPORT void JNICALL Java_kim_hsl_ffmpeg_DarrenPlayer_decodeVieo0(JNIEnv *env, jobject thiz, jstring url) {
+    LOGE("native decode video entrance");
+    const char* str = env->GetStringUTFChars(url, NULL);
+
+
+
+    env->ReleaseStringUTFChars(url, str);
+
+}

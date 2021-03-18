@@ -46,7 +46,10 @@ class DarrenPlayer {
         }
         play0(url);
 //        openSLES_Play(url);
+        decodeVieo0(url);
     }
+
+    private native void decodeVieo0(String url);
 
     private native void play0(String url);
 
