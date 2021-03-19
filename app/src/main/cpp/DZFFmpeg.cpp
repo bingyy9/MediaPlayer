@@ -33,6 +33,8 @@ void* threadReadPacket(void * context){
         if(av_read_frame(pFFmpeg->pFormatContext, pPacket) >= 0){
             if(pPacket->stream_index == pFFmpeg->pAudio->streamIndex) {
                 pFFmpeg->pAudio->pPacketQueue->push(pPacket);
+            } else if(pPacket->stream_index == pFFmpeg->pVideo->streamIndex) {
+                pFFmpeg->pVideo->pPacketQueue->push(pPacket);
             } else {
                 //解引用
                 av_packet_free(&pPacket);
@@ -53,6 +55,9 @@ void DZFFmpeg::play() {
 
     if(pAudio != NULL){
         pAudio->play();
+    }
+    if(pVideo != NULL){
+        pVideo->play();
     }
 
 //    prepare(THREAD_MAIN);
@@ -77,6 +82,11 @@ void DZFFmpeg::release() {
     if(pAudio != NULL){
         free(pAudio);
         pAudio = NULL;
+    }
+
+    if(pVideo != NULL){
+        free(pVideo);
+        pVideo = NULL;
     }
 
     if(pFormatContext != NULL){
@@ -300,11 +310,29 @@ void DZFFmpeg::prepareAsync(ThreadMode threadMode) {
         return;
     }
 
+    //查找音频流的index
+    int videoStreamIndex = av_find_best_stream(pFormatContext, AVMediaType::AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+    if(videoStreamIndex < 0){
+        LOGE("av_find_best_stream find video stream error: %s", av_err2str(audioStreamIndex));
+//        onJniPlayError(threadMode, FIND_BEST_STREAM_ERROR_CODE, av_err2str(audioStreamIndex));
+//        return;
+    }
+
     pAudio = new DZAudio(audioStreamIndex, pJniCall, pPlayerStatus);
     pAudio->analysisStream(threadMode, pFormatContext);
 
-    //-------------重采样end
+    if(videoStreamIndex >= 0){
+        pVideo = new DZVideo(videoStreamIndex, pJniCall, pPlayerStatus);
+        pVideo->analysisStream(threadMode, pFormatContext);
+    }
+
     pJniCall->onPrepared(threadMode);
+}
+
+void DZFFmpeg::setSurface(jobject object) {
+    if(pVideo != NULL){
+        pVideo->setSurface(object);
+    }
 }
 
 

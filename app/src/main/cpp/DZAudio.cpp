@@ -9,7 +9,6 @@ DZAudio::DZAudio(int audioStreamIndex, DZJNICall *jniCall, DZPlayerStatus *playe
 
 DZAudio::~DZAudio() {
     release();
-
 }
 
 void* audioThreadPlay(void * context){
@@ -152,27 +151,28 @@ void DZAudio::initCreateOpenSELS(){
     bqPlayerCallbackDN(bqPlayerBufferQueue, this);
 }
 
-int DZAudio::resampleAudio(){
+int DZAudio::resampleAudio(void *context){
+    DZAudio *pAudio = (DZAudio *)(context);
     int dataSize = 0;
     AVPacket *pPacket = NULL;
     AVFrame *pFrame = av_frame_alloc();
-    while(this->pPlayerStatus != NULL && !this->pPlayerStatus->isExist){
-        pPacket = this->pPacketQueue->pop();
+    while(pAudio->pPlayerStatus != NULL && !pAudio->pPlayerStatus->isExist){
+        pPacket = pAudio->pPacketQueue->pop();
         if(pPacket == NULL){
             //sleep
             continue;
         }
         //Packet包，压缩的数据，解码成pcm数据
-        int avcodecSendPacketRes = avcodec_send_packet(pCodecContext, pPacket);
+        int avcodecSendPacketRes = avcodec_send_packet(pAudio->pCodecContext, pPacket);
         if (avcodecSendPacketRes == 0) {
-            int avcodecReceiveFrameRes = avcodec_receive_frame(pCodecContext, pFrame);
+            int avcodecReceiveFrameRes = avcodec_receive_frame(pAudio->pCodecContext, pFrame);
             if (avcodecReceiveFrameRes == 0) {
                 //已经把AVPacket解码成AVFrame
                 LOGE("解码帧");
                 //调用重采样的方法：dataSize 返回的是重采样的个数，也就是pFrame->nb_samples
-                dataSize = swr_convert(swrContext, &resampleOutBuffer, pFrame->nb_samples, (const uint8_t **)(pFrame->data), pFrame->nb_samples);
+                dataSize = swr_convert(pAudio->swrContext, &pAudio->resampleOutBuffer, pFrame->nb_samples, (const uint8_t **)(pFrame->data), pFrame->nb_samples);
                 dataSize = dataSize * 2 * 2;
-                LOGE("解码帧，dataSize = %d, nb_samples = %d, frame_size = %d", dataSize, pFrame->nb_samples, pCodecContext->frame_size);
+                LOGE("解码帧，dataSize = %d, nb_samples = %d, frame_size = %d", dataSize, pFrame->nb_samples, pAudio->pCodecContext->frame_size);
 //                    //在native层创建C数组
 //                    memcpy(jPcmData, resampleOutBuffer, avSamplesBufferSize);
 //                    //传0同步到java jbyteArray，并释放native jbyte*数组， 参考数组的细节处理章节.
@@ -196,7 +196,7 @@ void DZAudio::bqPlayerCallbackDN(SLAndroidSimpleBufferQueueItf bq, void *context
 {
     LOGE("bqPlayerCallbackDN========");
     DZAudio *pAudio = (DZAudio *)(context);
-    int dataSize = pAudio->resampleAudio();
+    int dataSize = pAudio->resampleAudio(context);
     (*bq)->Enqueue(bq, pAudio->resampleOutBuffer, dataSize);
 //    LOGE("bqPlayerCallbackDN----- begin");
 //    if(pcmFile != NULL && !feof(pcmFile)){
@@ -219,8 +219,6 @@ void DZAudio::play() {
         pthread_t playThreadT;
         pthread_create(&playThreadT, NULL, audioThreadPlay, this);
         pthread_detach(playThreadT);
-
-
     } else {
         initCreateOpenSELS();
     }

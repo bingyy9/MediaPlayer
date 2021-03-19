@@ -68,4 +68,6 @@ class DarrenPlayer {
     public void prepareAsync() {
         prepareAsync0(url);
     }
+
+    public native void setSurface(Surface surface);
 }

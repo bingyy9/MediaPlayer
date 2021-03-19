@@ -92,7 +92,7 @@ public class Player implements SurfaceHolder.Callback {
         surfaceHolder.removeCallback(this);
 
         //释放资源
-        native_release();
+//        native_release();
 
     }
 

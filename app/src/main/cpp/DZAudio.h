@@ -24,7 +24,6 @@ extern "C" {
 
 class DZAudio: public DZMedia{
 public:
-    AVFormatContext *pFormatContext = NULL;
     SwrContext *swrContext = NULL;
     uint8_t *resampleOutBuffer = NULL;
 
@@ -58,7 +57,7 @@ public:
 
     void initCreateOpenSELS();
 
-    int resampleAudio();
+    int resampleAudio(void *context);
 
     static void bqPlayerCallbackDN(SLAndroidSimpleBufferQueueItf bq, void *context);
 

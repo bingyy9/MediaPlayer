@@ -5,8 +5,12 @@
 #include "DZMedia.h"
 
 void DZMedia::analysisStream(ThreadMode threadMode, AVFormatContext *pFormatContext) {
-    publicAnalysisStream(threadMode, pFormatContext);
-    privateAnalysisStream(threadMode, pFormatContext);
+    if(streamIndex >= 0){
+        publicAnalysisStream(threadMode, pFormatContext);
+        privateAnalysisStream(threadMode, pFormatContext);
+    } else {
+        LOGE("analysisStream streamIndex is -1");
+    }
 }
 
 DZMedia::~DZMedia() {

@@ -5,6 +5,7 @@
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
 #include <malloc.h>
+#include <threads.h>
 //#include <SELS/OpenSELS.h>
 //#include <SELS/OpenSLES_Android.h>
 
@@ -20,10 +21,9 @@ extern "C" {
 #include "DZFFmpeg.h"
 #include "DZAudio.h"
 #include "DZMedia.h"
-
-
-
 #include "FFMPEG.h"
+using namespace std;
+
 
 //声明 FFMPEG 类
 FFMPEG *ffmpeg = 0;
@@ -127,7 +127,7 @@ void show(uint8_t *data, int linesize, int width, int height){
 extern "C"
 JNIEXPORT void JNICALL
 Java_kim_hsl_ffmpeg_Player_native_1prepare(JNIEnv *env, jobject instance, jstring dataSource_) {
-
+    LOGE("Java_kim_hsl_ffmpeg_Player_native_1prepare");
     //Java 中传入的视频直播流地址 , "rtmp://live.hkstv.hk.lxdns.com/live/hks"
     const char *dataSource = env->GetStringUTFChars(dataSource_, 0);
 
@@ -153,9 +153,9 @@ JNIEXPORT void JNICALL
 Java_kim_hsl_ffmpeg_Player_native_1start(JNIEnv *env, jobject instance) {
 
     //调用本地 ffmpeg 播放器的 start() 方法
-    if(ffmpeg) {
-        ffmpeg->start();
-    }
+//    if(ffmpeg) {
+//        ffmpeg->start();
+//    }
 }
 
 extern "C"
@@ -283,6 +283,7 @@ extern "C" JNIEXPORT void JNICALL Java_kim_hsl_ffmpeg_DarrenPlayer_prepare0(JNIE
 }
 
 extern "C" JNIEXPORT void JNICALL Java_kim_hsl_ffmpeg_DarrenPlayer_prepareAsync0(JNIEnv *env, jobject thiz, jstring url_) {
+    LOGE("Java_kim_hsl_ffmpeg_DarrenPlayer_prepareAsync0 thread is %d", pthread_self());
     if(pDZJNICall == NULL){
         pDZJNICall = new DZJNICall(pJavaVM, env, thiz);
     }
@@ -425,4 +426,16 @@ extern "C" JNIEXPORT void JNICALL Java_kim_hsl_ffmpeg_DarrenPlayer_decodeVieo0(J
 
     env->ReleaseStringUTFChars(url_, url);
 
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_kim_hsl_ffmpeg_DarrenPlayer_setSurface(JNIEnv *env, jobject thiz, jobject surface) {
+    LOGE("Java_kim_hsl_ffmpeg_DarrenPlayer_setSurface thread is %d", pthread_self());
+
+    if(pDZFFmpeg != NULL){
+        LOGE("setSurface 111");
+        pDZFFmpeg->setSurface(surface);
+        LOGE("setSurface 222");
+    }
 }

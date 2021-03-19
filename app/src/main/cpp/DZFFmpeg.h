@@ -12,6 +12,7 @@ extern "C" {
 
 #include "DZJNICall.h"
 #include "DZAudio.h"
+#include "DZVideo.h"
 #include "DZConstDefine.h"
 #include <pthread.h>
 
@@ -22,6 +23,7 @@ public:
     char* url = NULL;
     DZJNICall *pJniCall = NULL;
     DZAudio *pAudio = NULL;
+    DZVideo *pVideo = NULL;
     DZPlayerStatus *pPlayerStatus = NULL;
 
 public:
@@ -35,6 +37,7 @@ public:
     void prepareAsync();
     void prepare(ThreadMode threadMode);
     void prepareAsync(ThreadMode threadMode);
+    void setSurface(jobject object);
 
 private:
     void release();
