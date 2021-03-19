@@ -19,6 +19,7 @@ extern "C" {
 #include "DZJNICall.h"
 #include "DZFFmpeg.h"
 #include "DZAudio.h"
+#include "DZMedia.h"
 
 
 

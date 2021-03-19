@@ -11,6 +11,7 @@ DZFFmpeg::DZFFmpeg(DZJNICall *dzjniCall, const char *url) {
     //复制一份url， 怕主线程销毁了url
     this->url = (char *)malloc(strlen(url) + 1);
     memcpy(this->url, url, strlen(url) + 1);
+    pPlayerStatus = new DZPlayerStatus();
 }
 
 DZFFmpeg::~DZFFmpeg() {
@@ -23,7 +24,33 @@ void *threadPlay(void* context){
     return 0;
 }
 
+void* threadReadPacket(void * context){
+    LOGE("threadReadPacket====");
+    DZFFmpeg* pFFmpeg = (DZFFmpeg *)context;
+
+    while(pFFmpeg->pPlayerStatus != NULL && !pFFmpeg->pPlayerStatus->isExist){
+        AVPacket *pPacket = av_packet_alloc();
+        if(av_read_frame(pFFmpeg->pFormatContext, pPacket) >= 0){
+            if(pPacket->stream_index == pFFmpeg->pAudio->streamIndex) {
+                pFFmpeg->pAudio->pPacketQueue->push(pPacket);
+            } else {
+                //解引用
+                av_packet_free(&pPacket);
+            }
+        } else {
+            av_packet_free(&pPacket);
+            //睡眠，尽量不去消耗CPU资源，也可以退出销毁线程
+        }
+    }
+}
+
 void DZFFmpeg::play() {
+
+    //一个线程读取packet
+    pthread_t readPacketThreadT;
+    pthread_create(&readPacketThreadT, NULL, threadReadPacket, this);
+    pthread_detach(readPacketThreadT);
+
     if(pAudio != NULL){
         pAudio->play();
     }
@@ -62,6 +89,11 @@ void DZFFmpeg::release() {
     if(this->url != NULL){
         free (this->url);
         this->url = NULL;
+    }
+
+    if(pPlayerStatus != NULL){
+        delete pPlayerStatus;
+        pPlayerStatus = NULL;
     }
 }
 
@@ -242,7 +274,6 @@ void DZFFmpeg::prepare(ThreadMode threadMode) {
 void DZFFmpeg::prepareAsync(ThreadMode threadMode) {
     av_register_all();
     avformat_network_init();
-    AVFormatContext *pFormatContext = NULL;
 
     LOGE("DZFFmpeg::prepare url = %s", url);
     int formatOpenInputRes = avformat_open_input(&pFormatContext, url, NULL, NULL);
@@ -269,8 +300,8 @@ void DZFFmpeg::prepareAsync(ThreadMode threadMode) {
         return;
     }
 
-    pAudio = new DZAudio(audioStreamIndex, pJniCall, pFormatContext);
-    pAudio->analysisStream(threadMode, pFormatContext->streams);
+    pAudio = new DZAudio(audioStreamIndex, pJniCall, pPlayerStatus);
+    pAudio->analysisStream(threadMode, pFormatContext);
 
     //-------------重采样end
     pJniCall->onPrepared(threadMode);

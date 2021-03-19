@@ -22,6 +22,7 @@ public:
     char* url = NULL;
     DZJNICall *pJniCall = NULL;
     DZAudio *pAudio = NULL;
+    DZPlayerStatus *pPlayerStatus = NULL;
 
 public:
     DZFFmpeg(DZJNICall *dzjniCall, const char* url);

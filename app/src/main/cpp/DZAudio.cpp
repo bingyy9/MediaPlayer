@@ -4,18 +4,11 @@
 
 #include "DZAudio.h"
 
-DZAudio::DZAudio(int audioStreamIndex, DZJNICall *jniCall,  AVFormatContext *formatContext) {
-    this->audioStreamIndex = audioStreamIndex;
-    this->pJniCall = jniCall;
-//    this->pCodecContext = codecContext;
-    this->pFormatContext = formatContext;
-//    this->swrContext = swrContext;
-    pPacketQueue = new DZAVPacketQueue();
-    pPlayerStatus = new DZPlayerStatus();
+DZAudio::DZAudio(int audioStreamIndex, DZJNICall *jniCall, DZPlayerStatus *playerStatus) : DZMedia(audioStreamIndex, jniCall, playerStatus){
 }
 
 DZAudio::~DZAudio() {
-    audio_release();
+    release();
 
 }
 
@@ -25,28 +18,6 @@ void* audioThreadPlay(void * context){
     LOGE("audioThreadPlay %p " , audio);
     audio->initCreateOpenSELS();
     LOGE("audioThreadPlay222 %p " , audio);
-}
-
-
-
-void* threadReadPacket(void * context){
-    LOGE("threadReadPacket====");
-    DZAudio* audio = (DZAudio *)context;
-
-    while(audio->pPlayerStatus != NULL && !audio->pPlayerStatus->isExist){
-        AVPacket *pPacket = av_packet_alloc();
-        if(av_read_frame(audio->pFormatContext, pPacket) >= 0){
-            if(pPacket->stream_index == audio->audioStreamIndex) {
-                audio->pPacketQueue->push(pPacket);
-            } else {
-                //解引用
-                av_packet_free(&pPacket);
-            }
-        } else {
-            av_packet_free(&pPacket);
-            //睡眠，尽量不去消耗CPU资源，也可以退出销毁线程
-        }
-    }
 }
 
 void DZAudio::initCreateOpenSELS(){
@@ -181,7 +152,7 @@ void DZAudio::initCreateOpenSELS(){
     bqPlayerCallbackDN(bqPlayerBufferQueue, this);
 }
 
-int DZAudio::resampleAudio2(){
+int DZAudio::resampleAudio(){
     int dataSize = 0;
     AVPacket *pPacket = NULL;
     AVFrame *pFrame = av_frame_alloc();
@@ -220,60 +191,12 @@ int DZAudio::resampleAudio2(){
     return dataSize;
 };
 
-int DZAudio::resampleAudio(){
-    int dataSize = 0;
-    AVPacket *pPacket = av_packet_alloc();
-    AVFrame *pFrame = av_frame_alloc();
-    int index = 0;
-    while(av_read_frame(pFormatContext, pPacket) >= 0){
-        if(pPacket->stream_index == audioStreamIndex) {
-            //Packet包，压缩的数据，解码成pcm数据
-            int avcodecSendPacketRes = avcodec_send_packet(pCodecContext, pPacket);
-            if (avcodecSendPacketRes == 0) {
-                int avcodecReceiveFrameRes = avcodec_receive_frame(pCodecContext, pFrame);
-                if (avcodecReceiveFrameRes == 0) {
-                    //已经把AVPacket解码成AVFrame
-                    index++;
-                    LOGE("解码第%d帧", index);
-                    //调用重采样的方法：dataSize 返回的是重采样的个数，也就是pFrame->nb_samples
-                    dataSize = swr_convert(swrContext, &resampleOutBuffer, pFrame->nb_samples, (const uint8_t **)(pFrame->data), pFrame->nb_samples);
-                    dataSize = dataSize * 2 * 2;
-                    LOGE("解码第%d帧，dataSize = %d, nb_samples = %d, frame_size = %d", index, dataSize, pFrame->nb_samples, pCodecContext->frame_size);
-//                    //在native层创建C数组
-//                    memcpy(jPcmData, resampleOutBuffer, avSamplesBufferSize);
-//                    //传0同步到java jbyteArray，并释放native jbyte*数组， 参考数组的细节处理章节.
-//                    //  JNI_COMMIT仅仅同步，不释放native数组
-//                    jniEnv->ReleaseByteArrayElements(jPcmByteArray, jPcmData, JNI_COMMIT);
-//                    pJniCall->callAudioTrackWrite(threadMode, jPcmByteArray, 0, avSamplesBufferSize);
-                    break;
-                }
-            }
-        }
-
-        //解引用
-        av_packet_unref(pPacket);
-        av_frame_unref(pFrame);
-    }
-
-//    pFrame->data
-
-    //1. 解引用数据data 2. 销毁pPacket结构体内存 3. pPacket = NULL
-    av_packet_free(&pPacket);
-    av_frame_free(&pFrame);
-    return dataSize;
-}
-
 // this callback handler is called every time a buffer finishes playing
 void DZAudio::bqPlayerCallbackDN(SLAndroidSimpleBufferQueueItf bq, void *context)
 {
     LOGE("bqPlayerCallbackDN========");
     DZAudio *pAudio = (DZAudio *)(context);
-    int dataSize = 0;
-    if(pAudio->async){
-        dataSize = pAudio->resampleAudio2();
-    } else {
-        dataSize = pAudio->resampleAudio();
-    }
+    int dataSize = pAudio->resampleAudio();
     (*bq)->Enqueue(bq, pAudio->resampleOutBuffer, dataSize);
 //    LOGE("bqPlayerCallbackDN----- begin");
 //    if(pcmFile != NULL && !feof(pcmFile)){
@@ -298,51 +221,12 @@ void DZAudio::play() {
         pthread_detach(playThreadT);
 
 
-        //一个线程读取packet
-        pthread_t readPacketThreadT;
-        pthread_create(&readPacketThreadT, NULL, threadReadPacket, this);
-        pthread_detach(readPacketThreadT);
     } else {
         initCreateOpenSELS();
     }
 }
 
-void DZAudio::analysisStream(ThreadMode threadMode, AVStream **streams) {
-
-    AVCodecParameters *pCodecParameters = streams[audioStreamIndex]->codecpar;
-    //查找解码
-    AVCodec *pCodec = avcodec_find_decoder(pCodecParameters->codec_id);
-    if(pCodec == NULL){
-        LOGE("avCodec is null");
-        onJniPlayError(threadMode, CODED_FIND_DECODER_ERROR_CODE, "avCodec is null");
-        return;
-    }
-
-
-    //打开解码器
-    pCodecContext = avcodec_alloc_context3(pCodec);
-    if(pCodecContext == NULL){
-        LOGE("pCodecContext is null");
-        onJniPlayError(threadMode, ALLOCATE_CONTEXT_ERROR_CODE, "pCodecContext is null");
-        return;
-    }
-
-    int avcodecParametersToContextRes = avcodec_parameters_to_context(pCodecContext, pCodecParameters);
-    if(avcodecParametersToContextRes  < 0){
-        LOGE("codec parameters to context error : %s ", av_err2str(avcodecParametersToContextRes));
-        onJniPlayError(threadMode, AVCODEC_PARAM_TO_CONTEXT_ERROR_CODE, av_err2str(avcodecParametersToContextRes));
-        return;
-    }
-    int avcodecOpenRes = avcodec_open2(pCodecContext, pCodec, NULL);
-    if(avcodecOpenRes != 0){
-        LOGE("codec audio open fail : %s ", av_err2str(avcodecOpenRes));
-        onJniPlayError(threadMode, AVCODEC_OPEN_2_ERROR_CODE, av_err2str(avcodecOpenRes));
-        return;
-    }
-//    avcodec_open2(pFormatContext->streams[audioStreamIndex]->codec, pCodec, NULL);
-
-    LOGE("%d, %d", pCodecParameters->sample_rate, pCodecParameters->channels);
-
+void DZAudio::privateAnalysisStream(ThreadMode threadMode, AVFormatContext *pFormatContext) {
     //--------------重采样start
     int64_t out_ch_layout = AV_CH_LAYOUT_STEREO;
     enum AVSampleFormat out_sample_fmt = AVSampleFormat::AV_SAMPLE_FMT_S16;
@@ -373,17 +257,12 @@ void DZAudio::analysisStream(ThreadMode threadMode, AVStream **streams) {
 
 void DZAudio::onJniPlayError(ThreadMode threadMode, int code, char *msg) {
     //释放资源
-    audio_release();
+    release();
     pJniCall->onPlayError(threadMode, code, msg);
 }
 
-void DZAudio::audio_release() {
-    if(pCodecContext != NULL){
-        avcodec_close(pCodecContext);
-        avcodec_free_context(&pCodecContext);
-        pCodecContext = NULL;
-    }
-
+void DZAudio::release() {
+    DZMedia::release();
     if(swrContext != NULL){
         swr_free(&swrContext);
         free(swrContext);
@@ -393,10 +272,6 @@ void DZAudio::audio_release() {
     if(resampleOutBuffer != NULL){
         free(resampleOutBuffer);
         resampleOutBuffer = NULL;
-    }
-    if(pPacketQueue != NULL){
-        delete pPacketQueue;
-        pPacketQueue = NULL;
     }
 
     if(pPlayerStatus != NULL){

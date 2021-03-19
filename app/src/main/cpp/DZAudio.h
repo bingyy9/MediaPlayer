@@ -19,16 +19,14 @@ extern "C" {
 #include "DZConstDefine.h"
 #include "DZAVPacketQueue.h"
 #include "DZPlayerStatus.h"
+#include "DZMedia.h"
 
 
-class DZAudio{
+class DZAudio: public DZMedia{
 public:
     AVFormatContext *pFormatContext = NULL;
-    AVCodecContext* pCodecContext = NULL;
     SwrContext *swrContext = NULL;
     uint8_t *resampleOutBuffer = NULL;
-    DZJNICall *pJniCall = NULL;
-    int audioStreamIndex = -1;
 
     // engine interfaces
     SLObjectItf engineObject = NULL;
@@ -51,12 +49,9 @@ public:
     // aux effect on the output mix, used by the buffer queue player
     const SLEnvironmentalReverbSettings reverbSettings =
             SL_I3DL2_ENVIRONMENT_PRESET_STONECORRIDOR;
-    DZAVPacketQueue* pPacketQueue = NULL;
-    DZPlayerStatus* pPlayerStatus = NULL;
-    bool async = false;
 
 public:
-    DZAudio(int audioStreamIndex, DZJNICall *jniCal, AVFormatContext *pFormatContext);
+    DZAudio(int audioStreamIndex, DZJNICall *jniCal, DZPlayerStatus *playerStatus);
     ~DZAudio();
 
     void play();
@@ -64,15 +59,14 @@ public:
     void initCreateOpenSELS();
 
     int resampleAudio();
-    int resampleAudio2();
 
     static void bqPlayerCallbackDN(SLAndroidSimpleBufferQueueItf bq, void *context);
 
-    void analysisStream(ThreadMode mode, AVStream **pStream);
+    void privateAnalysisStream(ThreadMode mode, AVFormatContext *pFormatContext);
 
     void onJniPlayError(ThreadMode threadMode, int code, char *msg);
 
-    void audio_release();
+    void release();
 };
 
 

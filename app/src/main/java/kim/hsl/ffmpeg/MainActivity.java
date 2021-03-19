@@ -218,8 +218,8 @@ public class MainActivity extends Activity implements MediaPreparedListener, Med
             }
         });
 
-//        testDarrenPlayer();
-        testDarrenVideoPlayer();
+        testDarrenPlayer();
+//        testDarrenVideoPlayer();
     }
     /**
      * 播放
