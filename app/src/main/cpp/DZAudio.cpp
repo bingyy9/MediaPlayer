@@ -19,180 +19,8 @@ void* audioThreadPlay(void * context){
     LOGE("audioThreadPlay222 %p " , audio);
 }
 
-void DZAudio::initCreateOpenSELS(){
-    LOGE("initCreateOpenSELS");
-//    •	创建引擎接口对象
-//    •	设置混音器并且设置参数
-//    •	创建播放器
-//    •	设置缓存队列和回调函数
-//    •	调用回调函数
-    SLresult result;
-
-    // create engine
-    result = slCreateEngine(&engineObject, 0, NULL, 0, NULL, NULL);
-    assert(SL_RESULT_SUCCESS == result);
-    (void)result;
-
-    // realize the engine
-    result = (*engineObject)->Realize(engineObject, SL_BOOLEAN_FALSE);
-    assert(SL_RESULT_SUCCESS == result);
-    (void)result;
-
-    // get the engine interface, which is needed in order to create other objects
-    result = (*engineObject)->GetInterface(engineObject, SL_IID_ENGINE, &engineEngine);
-    assert(SL_RESULT_SUCCESS == result);
-    (void)result;
-
-    // create output mix, with environmental reverb specified as a non-required interface
-    const SLInterfaceID ids[1] = {SL_IID_ENVIRONMENTALREVERB};
-    const SLboolean req[1] = {SL_BOOLEAN_FALSE};
-    result = (*engineEngine)->CreateOutputMix(engineEngine, &outputMixObject, 1, ids, req);
-    assert(SL_RESULT_SUCCESS == result);
-    (void)result;
-
-    // realize the output mix
-    result = (*outputMixObject)->Realize(outputMixObject, SL_BOOLEAN_FALSE);
-    assert(SL_RESULT_SUCCESS == result);
-    (void)result;
-
-    // get the environmental reverb interface
-    // this could fail if the environmental reverb effect is not available,
-    // either because the feature is not present, excessive CPU load, or
-    // the required MODIFY_AUDIO_SETTINGS permission was not requested and granted
-    result = (*outputMixObject)->GetInterface(outputMixObject, SL_IID_ENVIRONMENTALREVERB,
-                                              &outputMixEnvironmentalReverb);
-    if (SL_RESULT_SUCCESS == result) {
-        result = (*outputMixEnvironmentalReverb)->SetEnvironmentalReverbProperties(
-                outputMixEnvironmentalReverb, &reverbSettings);
-        (void)result;
-    }
-
-
-    // configure audio source
-    SLDataLocator_AndroidSimpleBufferQueue loc_bufq = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE, 2};
-    SLDataFormat_PCM format_pcm = {SL_DATAFORMAT_PCM, 2, SL_SAMPLINGRATE_44_1,
-                                   SL_PCMSAMPLEFORMAT_FIXED_16, SL_PCMSAMPLEFORMAT_FIXED_16,
-                                   SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT, SL_BYTEORDER_LITTLEENDIAN};
-    /*
-     * Enable Fast Audio when possible:  once we set the same rate to be the native, fast audio path
-     * will be triggered
-     */
-    if(bqPlayerSampleRate) {
-        format_pcm.samplesPerSec = bqPlayerSampleRate;       //sample rate in mili second
-    }
-    SLDataSource audioSrc = {&loc_bufq, &format_pcm};
-
-    // configure audio sink
-    SLDataLocator_OutputMix loc_outmix = {SL_DATALOCATOR_OUTPUTMIX, outputMixObject};
-    SLDataSink audioSnk = {&loc_outmix, NULL};
-
-    /*
-     * create audio player:
-     *     fast audio does not support when SL_IID_EFFECTSEND is required, skip it
-     *     for fast audio case
-     */
-    const SLInterfaceID ids2[3] = {SL_IID_BUFFERQUEUE, SL_IID_VOLUME, SL_IID_EFFECTSEND,
-            /*SL_IID_MUTESOLO,*/};
-    const SLboolean req2[3] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE,
-            /*SL_BOOLEAN_TRUE,*/ };
-
-    result = (*engineEngine)->CreateAudioPlayer(engineEngine, &bqPlayerObject, &audioSrc, &audioSnk,
-                                                bqPlayerSampleRate? 2 : 3, ids2, req2);
-    assert(SL_RESULT_SUCCESS == result);
-    (void)result;
-
-    // realize the player
-    result = (*bqPlayerObject)->Realize(bqPlayerObject, SL_BOOLEAN_FALSE);
-    assert(SL_RESULT_SUCCESS == result);
-    (void)result;
-
-    // get the play interface
-    result = (*bqPlayerObject)->GetInterface(bqPlayerObject, SL_IID_PLAY, &bqPlayerPlay);
-    assert(SL_RESULT_SUCCESS == result);
-    (void)result;
-
-    // get the buffer queue interface
-    result = (*bqPlayerObject)->GetInterface(bqPlayerObject, SL_IID_BUFFERQUEUE,
-                                             &bqPlayerBufferQueue);
-    assert(SL_RESULT_SUCCESS == result);
-    (void)result;
-
-    // register callback on the buffer queue, 每次回调this会带给playCallback里面的Context
-    result = (*bqPlayerBufferQueue)->RegisterCallback(bqPlayerBufferQueue, bqPlayerCallbackDN, this);
-    assert(SL_RESULT_SUCCESS == result);
-    (void)result;
-
-    // get the effect send interface
-    bqPlayerEffectSend = NULL;
-    if( 0 == bqPlayerSampleRate) {
-        result = (*bqPlayerObject)->GetInterface(bqPlayerObject, SL_IID_EFFECTSEND,
-                                                 &bqPlayerEffectSend);
-        assert(SL_RESULT_SUCCESS == result);
-        (void)result;
-    }
-
-#if 0   // mute/solo is not supported for sources that are known to be mono, as this is
-    // get the mute/solo interface
-    result = (*bqPlayerObject)->GetInterface(bqPlayerObject, SL_IID_MUTESOLO, &bqPlayerMuteSolo);
-    assert(SL_RESULT_SUCCESS == result);
-    (void)result;
-#endif
-
-    // get the volume interface
-    result = (*bqPlayerObject)->GetInterface(bqPlayerObject, SL_IID_VOLUME, &bqPlayerVolume);
-    assert(SL_RESULT_SUCCESS == result);
-    (void)result;
-
-    // set the player's state to playing
-    result = (*bqPlayerPlay)->SetPlayState(bqPlayerPlay, SL_PLAYSTATE_PLAYING);
-    assert(SL_RESULT_SUCCESS == result);
-    (void)result;
-
-    bqPlayerCallbackDN(bqPlayerBufferQueue, this);
-}
-
-int DZAudio::resampleAudio(void *context){
-    DZAudio *pAudio = (DZAudio *)(context);
-    int dataSize = 0;
-    AVPacket *pPacket = NULL;
-    AVFrame *pFrame = av_frame_alloc();
-    while(pAudio->pPlayerStatus != NULL && !pAudio->pPlayerStatus->isExist){
-        pPacket = pAudio->pPacketQueue->pop();
-        if(pPacket == NULL){
-            //sleep
-            continue;
-        }
-        //Packet包，压缩的数据，解码成pcm数据
-        int avcodecSendPacketRes = avcodec_send_packet(pAudio->pCodecContext, pPacket);
-        if (avcodecSendPacketRes == 0) {
-            int avcodecReceiveFrameRes = avcodec_receive_frame(pAudio->pCodecContext, pFrame);
-            if (avcodecReceiveFrameRes == 0) {
-                //已经把AVPacket解码成AVFrame
-                LOGE("解码帧");
-                //调用重采样的方法：dataSize 返回的是重采样的个数，也就是pFrame->nb_samples
-                dataSize = swr_convert(pAudio->swrContext, &pAudio->resampleOutBuffer, pFrame->nb_samples, (const uint8_t **)(pFrame->data), pFrame->nb_samples);
-                dataSize = dataSize * 2 * 2;
-                LOGE("解码帧，dataSize = %d, nb_samples = %d, frame_size = %d", dataSize, pFrame->nb_samples, pAudio->pCodecContext->frame_size);
-//                    //在native层创建C数组
-//                    memcpy(jPcmData, resampleOutBuffer, avSamplesBufferSize);
-//                    //传0同步到java jbyteArray，并释放native jbyte*数组， 参考数组的细节处理章节.
-//                    //  JNI_COMMIT仅仅同步，不释放native数组
-//                    jniEnv->ReleaseByteArrayElements(jPcmByteArray, jPcmData, JNI_COMMIT);
-//                    pJniCall->callAudioTrackWrite(threadMode, jPcmByteArray, 0, avSamplesBufferSize);
-                break;
-            }
-        }
-        av_packet_unref(pPacket);
-        av_frame_unref(pFrame);
-    }
-
-    av_packet_free(&pPacket);
-    av_frame_free(&pFrame);
-    return dataSize;
-};
-
 // this callback handler is called every time a buffer finishes playing
-void DZAudio::bqPlayerCallbackDN(SLAndroidSimpleBufferQueueItf bq, void *context)
+void playerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
 {
     LOGE("bqPlayerCallbackDN========");
     DZAudio *pAudio = (DZAudio *)(context);
@@ -212,6 +40,109 @@ void DZAudio::bqPlayerCallbackDN(SLAndroidSimpleBufferQueueItf bq, void *context
 //        }
 //    }
 }
+
+void DZAudio::initCreateOpenSELS(){
+    LOGE("initCreateOpenSELS");
+//    •	创建引擎接口对象
+//    •	设置混音器并且设置参数
+//    •	创建播放器
+//    •	设置缓存队列和回调函数
+//    •	调用回调函数
+    SLObjectItf engineObject = NULL;
+    SLEngineItf engineEngine;
+    slCreateEngine(&engineObject, 0, NULL, 0, NULL, NULL);
+    LOGE("initCreateOpenSELS1111");
+    // realize the engine
+    (*engineObject)->Realize(engineObject, SL_BOOLEAN_FALSE);
+    // get the engine interface, which is needed in order to create other objects
+    (*engineObject)->GetInterface(engineObject, SL_IID_ENGINE, &engineEngine);
+    // 3.2 设置混音器
+    static SLObjectItf outputMixObject = NULL;
+    const SLInterfaceID ids[1] = {SL_IID_ENVIRONMENTALREVERB};
+    const SLboolean req[1] = {SL_BOOLEAN_FALSE};
+    (*engineEngine)->CreateOutputMix(engineEngine, &outputMixObject, 1, ids, req);
+    (*outputMixObject)->Realize(outputMixObject, SL_BOOLEAN_FALSE);
+    SLEnvironmentalReverbItf outputMixEnvironmentalReverb = NULL;
+    (*outputMixObject)->GetInterface(outputMixObject, SL_IID_ENVIRONMENTALREVERB,
+                                     &outputMixEnvironmentalReverb);
+    SLEnvironmentalReverbSettings reverbSettings = SL_I3DL2_ENVIRONMENT_PRESET_STONECORRIDOR;
+    (*outputMixEnvironmentalReverb)->SetEnvironmentalReverbProperties(outputMixEnvironmentalReverb,
+                                                                      &reverbSettings);
+    // 3.3 创建播放器
+    SLObjectItf pPlayer = NULL;
+    SLPlayItf pPlayItf = NULL;
+    SLDataLocator_AndroidSimpleBufferQueue simpleBufferQueue = {
+            SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE, 2};
+    SLDataFormat_PCM formatPcm = {
+            SL_DATAFORMAT_PCM,
+            2,
+            SL_SAMPLINGRATE_44_1,
+            SL_PCMSAMPLEFORMAT_FIXED_16,
+            SL_PCMSAMPLEFORMAT_FIXED_16,
+            SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT,
+            SL_BYTEORDER_LITTLEENDIAN};
+    SLDataSource audioSrc = {&simpleBufferQueue, &formatPcm};
+    SLDataLocator_OutputMix outputMix = {SL_DATALOCATOR_OUTPUTMIX, outputMixObject};
+    SLDataSink audioSnk = {&outputMix, NULL};
+    SLInterfaceID interfaceIds[3] = {SL_IID_BUFFERQUEUE, SL_IID_VOLUME, SL_IID_PLAYBACKRATE};
+    SLboolean interfaceRequired[3] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
+    (*engineEngine)->CreateAudioPlayer(engineEngine, &pPlayer, &audioSrc, &audioSnk, 3,
+                                       interfaceIds, interfaceRequired);
+    (*pPlayer)->Realize(pPlayer, SL_BOOLEAN_FALSE);
+    (*pPlayer)->GetInterface(pPlayer, SL_IID_PLAY, &pPlayItf);
+    // 3.4 设置缓存队列和回调函数
+    SLAndroidSimpleBufferQueueItf playerBufferQueue;
+    (*pPlayer)->GetInterface(pPlayer, SL_IID_BUFFERQUEUE, &playerBufferQueue);
+    // 每次回调 this 会被带给 playerCallback 里面的 context
+    (*playerBufferQueue)->RegisterCallback(playerBufferQueue, playerCallback, this);
+    // 3.5 设置播放状态
+    (*pPlayItf)->SetPlayState(pPlayItf, SL_PLAYSTATE_PLAYING);
+    // 3.6 调用回调函数
+    playerCallback(playerBufferQueue, this);
+    LOGE("initCreateOpenSELS22222");
+}
+
+int DZAudio::resampleAudio(void *context){
+    DZAudio *pAudio = (DZAudio *)(context);
+    int dataSize = 0;
+    AVPacket *pPacket = NULL;
+    AVFrame *pFrame = av_frame_alloc();
+    while(pAudio->pPlayerStatus != NULL && !pAudio->pPlayerStatus->isExist){
+        pPacket = pAudio->pPacketQueue->pop();
+        if(pPacket == NULL){
+            //sleep
+            continue;
+        }
+        //Packet包，压缩的数据，解码成pcm数据
+        int avcodecSendPacketRes = avcodec_send_packet(pAudio->pCodecContext, pPacket);
+        if (avcodecSendPacketRes == 0) {
+            int avcodecReceiveFrameRes = avcodec_receive_frame(pAudio->pCodecContext, pFrame);
+            if (avcodecReceiveFrameRes == 0) {
+                //已经把AVPacket解码成AVFrame
+                LOGE("DZAudio 解码帧");
+                //调用重采样的方法：dataSize 返回的是重采样的个数，也就是pFrame->nb_samples
+                dataSize = swr_convert(pAudio->swrContext, &pAudio->resampleOutBuffer, pFrame->nb_samples, (const uint8_t **)(pFrame->data), pFrame->nb_samples);
+                dataSize = dataSize * 2 * 2;
+                LOGE("DZAudio 解码帧，dataSize = %d, nb_samples = %d, frame_size = %d", dataSize, pFrame->nb_samples, pAudio->pCodecContext->frame_size);
+//                    //在native层创建C数组
+//                    memcpy(jPcmData, resampleOutBuffer, avSamplesBufferSize);
+//                    //传0同步到java jbyteArray，并释放native jbyte*数组， 参考数组的细节处理章节.
+//                    //  JNI_COMMIT仅仅同步，不释放native数组
+//                    jniEnv->ReleaseByteArrayElements(jPcmByteArray, jPcmData, JNI_COMMIT);
+//                    pJniCall->callAudioTrackWrite(threadMode, jPcmByteArray, 0, avSamplesBufferSize);
+                break;
+            }
+        }
+        av_packet_unref(pPacket);
+        av_frame_unref(pFrame);
+    }
+
+    av_packet_free(&pPacket);
+    av_frame_free(&pFrame);
+    return dataSize;
+};
+
+
 
 void DZAudio::play() {
     if(async){

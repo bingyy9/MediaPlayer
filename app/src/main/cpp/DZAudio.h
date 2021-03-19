@@ -27,27 +27,27 @@ public:
     SwrContext *swrContext = NULL;
     uint8_t *resampleOutBuffer = NULL;
 
-    // engine interfaces
-    SLObjectItf engineObject = NULL;
-    SLEngineItf engineEngine;
-    // output mix interfaces
-    SLObjectItf outputMixObject = NULL;
-    SLEnvironmentalReverbItf outputMixEnvironmentalReverb = NULL;
-    // buffer queue player interfaces
-    SLObjectItf bqPlayerObject = NULL;
-    SLPlayItf bqPlayerPlay;
-    SLAndroidSimpleBufferQueueItf bqPlayerBufferQueue;
-    SLEffectSendItf bqPlayerEffectSend;
-    SLMuteSoloItf bqPlayerMuteSolo;
-    SLVolumeItf bqPlayerVolume;
-    SLmilliHertz bqPlayerSampleRate = 0;
-    jint   bqPlayerBufSize = 0;
-    short *resampleBuf = NULL;
-    FILE *pcmFile = NULL;
-    void *pcmBuffer = NULL;
-    // aux effect on the output mix, used by the buffer queue player
-    const SLEnvironmentalReverbSettings reverbSettings =
-            SL_I3DL2_ENVIRONMENT_PRESET_STONECORRIDOR;
+//    // engine interfaces
+//    SLObjectItf engineObject = NULL;
+//    SLEngineItf engineEngine;
+//    // output mix interfaces
+//    SLObjectItf outputMixObject = NULL;
+//    SLEnvironmentalReverbItf outputMixEnvironmentalReverb = NULL;
+//    // buffer queue player interfaces
+//    SLObjectItf bqPlayerObject = NULL;
+//    SLPlayItf bqPlayerPlay;
+//    SLAndroidSimpleBufferQueueItf bqPlayerBufferQueue;
+//    SLEffectSendItf bqPlayerEffectSend;
+//    SLMuteSoloItf bqPlayerMuteSolo;
+//    SLVolumeItf bqPlayerVolume;
+//    SLmilliHertz bqPlayerSampleRate = 0;
+//    jint   bqPlayerBufSize = 0;
+//    short *resampleBuf = NULL;
+//    FILE *pcmFile = NULL;
+//    void *pcmBuffer = NULL;
+//    // aux effect on the output mix, used by the buffer queue player
+//    const SLEnvironmentalReverbSettings reverbSettings =
+//            SL_I3DL2_ENVIRONMENT_PRESET_STONECORRIDOR;
 
 public:
     DZAudio(int audioStreamIndex, DZJNICall *jniCal, DZPlayerStatus *playerStatus);
@@ -58,8 +58,6 @@ public:
     void initCreateOpenSELS();
 
     int resampleAudio(void *context);
-
-    static void bqPlayerCallbackDN(SLAndroidSimpleBufferQueueItf bq, void *context);
 
     void privateAnalysisStream(ThreadMode mode, AVFormatContext *pFormatContext);
 
