@@ -15,6 +15,7 @@ extern "C" {
 #include "libswresample/swresample.h"
 #include "libswscale/swscale.h"
 #include "libavutil/imgutils.h"
+#include "libavutil/time.h"
 };
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
@@ -23,6 +24,7 @@ extern "C" {
 #include "DZAVPacketQueue.h"
 #include "DZPlayerStatus.h"
 #include "DZMedia.h"
+#include "DZAudio.h"
 
 class DZVideo : public DZMedia{
 public:
@@ -31,15 +33,23 @@ public:
     AVFrame *pRGBAFrame = NULL;
     int mFrameSize = 0;
     jobject pSurface = NULL;
+    DZAudio* pAudio;
+    //视频的延时时间
+    double delayTime = 0;
+    //默认情况下最合适的延迟时间 一般1秒24帧 = 0.04
+    double defaultDelayTime = 0.04;
 
 public:
-    DZVideo(int audioStreamIndex, DZJNICall *jniCall, DZPlayerStatus *playerStatus);
+    DZVideo(int audioStreamIndex, DZJNICall *jniCall, DZPlayerStatus *playerStatus, DZAudio* pAudio);
     ~DZVideo();
     void play();
     void privateAnalysisStream(ThreadMode threadMode, AVFormatContext *pFormatContext);
     void resampleVideo(void *context);
     void release();
     void setSurface(jobject object);
+
+    //视频同步音频，计算视频需要休眠的时间，单位s
+    double getFrameSleepTime(AVFrame *pFrame);
 };
 
 #endif //INC_011_FFMPEG_MASTER_DZVIDEO_H

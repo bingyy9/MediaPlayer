@@ -322,7 +322,7 @@ void DZFFmpeg::prepareAsync(ThreadMode threadMode) {
     pAudio->analysisStream(threadMode, pFormatContext);
 
     if(videoStreamIndex >= 0){
-        pVideo = new DZVideo(videoStreamIndex, pJniCall, pPlayerStatus);
+        pVideo = new DZVideo(videoStreamIndex, pJniCall, pPlayerStatus, pAudio);
         pVideo->analysisStream(threadMode, pFormatContext);
     }
 

@@ -5,8 +5,9 @@
 
 #include "DZVideo.h"
 
-DZVideo::DZVideo(int audioStreamIndex, DZJNICall *jniCall, DZPlayerStatus *playerStatus)
+DZVideo::DZVideo(int audioStreamIndex, DZJNICall *jniCall, DZPlayerStatus *playerStatus, DZAudio* pAudio)
     : DZMedia(audioStreamIndex, jniCall, playerStatus){
+    this->pAudio = pAudio;
 }
 
 
@@ -42,6 +43,16 @@ void DZVideo::privateAnalysisStream(ThreadMode threadMode, AVFormatContext *pFor
     mFrameSize = av_image_get_buffer_size(AV_PIX_FMT_RGBA, pCodecContext->width, pCodecContext->height, 1);
     pFrameBuffer = (uint8_t *) malloc(mFrameSize * sizeof(uint8_t));
     av_image_fill_arrays(pRGBAFrame->data, pRGBAFrame->linesize, pFrameBuffer, AV_PIX_FMT_RGBA, pCodecContext->width, pCodecContext->height, 1);
+
+    int num = pFormatContext->streams[streamIndex]->avg_frame_rate.num;
+    int den = pFormatContext->streams[streamIndex]->avg_frame_rate.den;
+    if(den != 0 && num != 0){
+//        //25/1
+//        int fps = num/den;
+//        defaultDelayTime = 1.0f/fps;
+        defaultDelayTime = 1.0f * den /num;
+        LOGE("DZVideo num = %d, den = %d, defaultDelayTime = %lf", num, den, defaultDelayTime);
+    }
 }
 
 void DZVideo::release() {
@@ -119,6 +130,13 @@ void DZVideo::resampleVideo(void *context) {
                 //pFrame->data一般都是YUV420P的。SurfaceView需要显示RGBA8888，因此需要转换。
                 sws_scale(pVideo->pSwsContext, pFrame->data, pFrame->linesize, 0, pVideo->pCodecContext->height
                         , pVideo->pRGBAFrame->data, pVideo->pRGBAFrame->linesize);
+
+
+                //在播放之前判断一下需要休眠多久
+                double frameSleepTime = pVideo->getFrameSleepTime(pFrame); //返回的单位是秒
+                LOGE("DZVideo frameSleepTime %lf", frameSleepTime);
+                av_usleep(frameSleepTime * 1000 * 1000); //单位是微妙
+
                 //拿到转换后的RGBA8888data后如何渲染？ 放入缓冲区
                 ANativeWindow_lock(pNativeWindow, &outBuffer, NULL);
                 memcpy(outBuffer.bits, pVideo->pFrameBuffer, mFrameSize);
@@ -157,4 +175,44 @@ void DZVideo::setSurface(jobject object) {
         LOGE("setSurface444");
         LOGE("DZVideop pSurface = %p ", this->pSurface);
     }
+}
+
+double DZVideo::getFrameSleepTime(AVFrame *pFrame) {
+    double times = pFrame->pts * av_q2d(timeBase); //转换成秒
+    LOGE("DZVideo getFrameSleepTime times %lf", times);
+    if(times > currentTime){
+        currentTime = times;
+    }
+
+    //视频快了就慢一点，视频慢了就快一点
+    //但是尽量的把时间控制在视频的帧率时间范围左右 1秒24帧，1/24 = 0.04  1/30 = 0.033
+
+    //相差多少秒
+    double diffTime = pAudio->currentTime - currentTime;
+
+
+    if(diffTime > 0.016 || diffTime < -0.016){
+        //第一次控制0.016s -- -0.016s
+        if(diffTime > 0.016){
+            delayTime = delayTime *2 / 3;
+        } else if(diffTime < -0.016){
+            delayTime = delayTime * 3/2;
+        }
+
+        //第二次控制
+        if(delayTime < defaultDelayTime/2){
+            delayTime = defaultDelayTime * 2/3;
+        } else if(delayTime > defaultDelayTime * 2){
+            delayTime = defaultDelayTime * 3/2;
+        }
+    }
+
+    //第三次控制，异常情况，防止越界
+    if(diffTime >= 0.25){
+        delayTime = 0;
+    } else if(diffTime <= -0.25){
+        delayTime = defaultDelayTime * 2;
+    }
+
+    return delayTime;
 }

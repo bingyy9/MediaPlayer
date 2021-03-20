@@ -124,7 +124,18 @@ int DZAudio::resampleAudio(void *context){
                 dataSize = swr_convert(pAudio->swrContext, &pAudio->resampleOutBuffer, pFrame->nb_samples, (const uint8_t **)(pFrame->data), pFrame->nb_samples);
                 dataSize = dataSize * 2 * 2;
                 LOGE("DZAudio 解码帧，dataSize = %d, nb_samples = %d, frame_size = %d", dataSize, pFrame->nb_samples, pAudio->pCodecContext->frame_size);
-//                    //在native层创建C数组
+
+                //设置当前时间，方便回到进度给Java，还有就是方便同步音频
+                //pFrame->pts == av_frame_get_best_effort_timestamp(pFrame);
+                double times = pFrame->pts * av_q2d(timeBase); //转换成秒
+                if(times > currentTime){
+                    currentTime = times;
+                }
+                //这里可以回调Java成当前的播放进度了。 因为视频是同步音频的，只要在音频这里回到Java层播放进度就可以了。
+
+
+
+                //                    //在native层创建C数组
 //                    memcpy(jPcmData, resampleOutBuffer, avSamplesBufferSize);
 //                    //传0同步到java jbyteArray，并释放native jbyte*数组， 参考数组的细节处理章节.
 //                    //  JNI_COMMIT仅仅同步，不释放native数组
