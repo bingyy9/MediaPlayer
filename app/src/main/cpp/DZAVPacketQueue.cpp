@@ -10,12 +10,14 @@ void DZAVPacketQueue::clear() {
         return;
     }
 
+    pthread_mutex_lock(&mutex);
     while(!pPacketQueue->empty()) {
         AVPacket *packet = pPacketQueue->front();
         pPacketQueue->pop();
         free(packet);
         packet = NULL;
     }
+    pthread_mutex_unlock(&mutex);
 }
 
 DZAVPacketQueue::DZAVPacketQueue() {
@@ -25,13 +27,13 @@ DZAVPacketQueue::DZAVPacketQueue() {
 }
 
 DZAVPacketQueue::~DZAVPacketQueue() {
-    pthread_mutex_destroy(&mutex);
-    pthread_cond_destroy(&cond);
     if(pPacketQueue != NULL){
         clear();
         delete pPacketQueue;
         pPacketQueue = NULL;
     }
+    pthread_mutex_destroy(&mutex);
+    pthread_cond_destroy(&cond);
 }
 
 void DZAVPacketQueue::push(AVPacket *packet) {
